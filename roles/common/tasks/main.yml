@@ -1,13 +1,84 @@
 ---
-- name: Install libselinux-python
-  yum: name=libselinux-python state=present
+- name: Install required packages users and docker
+  hosts: servers
+  become: true
+  tasks:
+    - name: Installed required packages
+      apt:
+        name: "{{ item.name }}"
+        state: "latest"
+        update_cache: yes
+      with_items:
+        - { name: 'vim'}
+        - { name: 'net-tools' }
+        - { name: 'sysstat' }
+        - { name: 'mysql-client' }
+        - { name: 'mysql-server' }
+        - { name: 'apt-transport-https'}
+        - { name: 'ca-certificates'}
+        - { name: 'curl'}
+        - { name: 'software-properties-common'}
 
-- name: Copy the EPEL repository definition
-  copy: src=epel.repo dest=/etc/yum.repos.d/epel.repo
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
 
-- name: Create the GPG key for EPEL
-  copy: src=RPM-GPG-KEY-EPEL-6 dest=/etc/pki/rpm-gpg
+    - name: Add Docker apt repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+        state: present
+        filename: docker
 
-- name: Set up iptables rules
-  copy: src=iptables-save dest=/etc/sysconfig/iptables
-  notify: restart iptables
+    - name: Install Docker CE
+      apt:
+        name: docker-ce
+        state: latest
+
+    - name: Ensure group ansible users exists
+      group:
+        name: ansible-users
+        state: present
+
+    - name: Ensure group docker exists
+      group:
+        name: docker
+        state: present
+
+    - name: Ensure Docker is started and enabled at boot
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add users
+      user:
+        name: "{{ item }}"
+        create_home: yes
+        shell: /bin/bash
+        groups: ansible-users
+        append: yes
+      with_items:
+        - user1
+        - user2
+        - user3
+        - user4
+
+    - name: Add ansible users group to sudoers for passwordless
+      copy:
+        dest: /etc/sudoers.d/ansible-users
+        content: "%ansible-users ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: '0440'
+
+    - name: Add users to docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      with_items:
+        - user1
+        - user2
+        - user3
+        - user4
