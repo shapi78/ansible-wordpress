@@ -1,13 +1,31 @@
 ---
-- name: Install libselinux-python
-  yum: name=libselinux-python state=present
+    - name: install items
+      apt:
+        name: "{{ item.name }}"
+        state: latest
+      with_items:
+        - vim
+        - net-tools
+        - sysstat
+        - mysql-client
+        - mysql-server
+        - apt-transport-https 
+        - ca-certificates 
+        - curl 
+        - software-properties-common
 
-- name: Copy the EPEL repository definition
-  copy: src=epel.repo dest=/etc/yum.repos.d/epel.repo
+    - name: create users
+      user:
+        name: "{{ item }}"
+        state: present
+        shell: /bin/bash
+      loop: "{{ users }}"
 
-- name: Create the GPG key for EPEL
-  copy: src=RPM-GPG-KEY-EPEL-6 dest=/etc/pki/rpm-gpg
-
-- name: Set up iptables rules
-  copy: src=iptables-save dest=/etc/sysconfig/iptables
-  notify: restart iptables
+    - name: Add sudo rights for deployment users.
+      lineinfile:
+        dest: /etc/sudoers
+        regexp: '^{{ item }}'
+        line: '{{ item }} ALL=(ALL) NOPASSWD: ALL'
+        state: present
+        validate: 'visudo -cf %s'
+      loop: "{{ users }}"
