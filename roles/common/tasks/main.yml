@@ -19,6 +19,7 @@
         name: "{{ item }}"
         state: present
         shell: /bin/bash
+        groups: {{ default_groups }}
       loop: "{{ users }}"
 
     - name: Add sudo rights for deployment users.
