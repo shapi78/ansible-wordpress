@@ -6,8 +6,8 @@
   become: yes
 
   roles:
-    - common
-    - mysql
+   # - common
+   # - mysql
     - nginx
-    - php-fpm
-    - wordpress
+   # - php-fpm
+   # - wordpress
