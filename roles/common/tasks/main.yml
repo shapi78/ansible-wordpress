@@ -1,9 +1,9 @@
 ---
 - name: Install libselinux-python
-  yum: name=libselinux-python state=present
+  apt: name=libselinux-python state=present
 
 - name: Copy the EPEL repository definition
-  copy: src=epel.repo dest=/etc/yum.repos.d/epel.repo
+  copy: src=epel.repo dest=/etc/apt.repos.d/epel.repo
 
 - name: Create the GPG key for EPEL
   copy: src=RPM-GPG-KEY-EPEL-6 dest=/etc/pki/rpm-gpg
