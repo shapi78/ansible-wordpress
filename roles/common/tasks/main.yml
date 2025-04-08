@@ -82,3 +82,24 @@
         - user2
         - user3
         - user4
+    
+    - name: Creates .ssh directory
+      ansible.builtin.file:
+        path: /home/"{{ item }}"/.ssh
+        state: directory
+      with_items:
+        - user1
+        - user2
+        - user3
+        - user4
+
+    - name: Set authorized key taken from file
+      ansible.posix.authorized_key:
+        user: "{{ item }}"
+        state: present
+        key: "{{ lookup('file', '/home/oleg/.ssh/id_rsa.pub') }}"
+      with_items:
+        - user1
+        - user2
+        - user3
+        - user4
