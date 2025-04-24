@@ -1,0 +1,112 @@
+---
+- name: Create users and push known_hosts to all users
+  hosts: servers
+  become: yes
+  vars:
+    # List of users to create
+    users:
+      - user1
+      - user2
+      - user3
+      - user4
+
+    # List of known hosts (these are the hosts you want to push to known_hosts files)
+    known_hosts_entries:
+      - server1.example.com
+      - server2.example.com
+      - 10.0.0.1  # An IP address
+
+  tasks:
+    # Create users with their home directories
+    - name: Ensure users are created
+      user:
+        name: "{{ item }}"
+        state: present
+        create_home: yes
+        shell: /bin/bash
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+
+    # Add users to the sudo group (common for granting sudo access)
+    - name: Add users to the sudo group
+      user:
+        name: "{{ item }}"
+        groups: sudo
+        append: yes
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+
+    # Create the .ssh directory for each user
+    - name: Create .ssh directory for each user
+      file:
+        path: "/home/{{ item }}/.ssh"
+        state: directory
+        mode: '0700'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+
+    # Create the known_hosts file for each user
+    - name: Create aws_key file for each user
+      file:
+        path: "/home/{{ item }}/.ssh/aws_key"
+        state: touch
+        mode: '0600'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+
+    - name: Add aws_key entries to all users' aws_key files
+      connection: ssh
+      copy:
+        src: /home/shaked/.ssh/ansible.pem
+        dest: /home/{{ item }}/.ssh/ansible.pem
+        mode: '0600'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+
+    # Use ssh-keyscan to populate the known_hosts file for each user
+    - name: Add aws_key entries to all users' aws_key files
+      connection: ssh
+      copy:
+        src: /home/shaked/.ssh/aws_key
+        dest: /home/{{ item }}/.ssh/aws_key
+        mode: '0600'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+      # become_user: "{{ item }}"  # Use 'item' for the user in the loop
+      # notify:
+      #   - Set proper permissions for known_hosts
+    - name: Add known_hosts entries to all users' known_hosts files
+      connection: ssh
+      copy:
+        src: /home/shaked/.ssh/known_hosts
+        dest: /home/{{ item }}/.ssh/known_hosts
+        mode: '0600'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item
+  handlers:
+    - name: Set proper permissions for known_hosts
+      file:
+        path: "/home/{{ item }}/.ssh/known_hosts"
+        mode: '0600'
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      loop: "{{ users }}"
+      loop_control:
+        loop_var: item

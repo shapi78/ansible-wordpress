@@ -1,0 +1,13 @@
+[Unit]
+Description=Script that update route53
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/ubuntu/update_route.sh
+RemainAfterExit=no
+Restart=no
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target          

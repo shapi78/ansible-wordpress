@@ -1,0 +1,149 @@
+
+
+services:
+
+  jenkins:
+    image: jenkins/jenkins:latest
+    container_name: jenkins
+    ports:
+      - 8080:8080
+      - 50000:50000
+      - "2222:22"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /usr/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/shaked/.ssh:/var/jenkins_home/.sshstancwe
+      - /home/shaked/.ssh/known_hosts:/var/jenkins_home/.ssh/known_hosts
+      - /home/shaked/.ssh/id_ed25519:/var/jenkins_home/.ssh/id_ed25519
+      - /home/shaked/ansible-wordpress/roles/nginx/tasks/:/var/jenkins_home/tasks/
+    user: root
+    entrypoint: /bin/bash -c "apt-get update && apt-get install -y jq && /usr/bin/tini -- /usr/local/bin/jenkins.sh"
+
+    restart: always
+    networks:
+      - shared_network
+      
+
+ # rabbitMQ:
+  #  image: rabbitmq:3.8-management
+   # container_name: rabbitmq
+  #  ports:
+  #    - 15672:15672
+  #    - "5672:5672"
+  #  environment:
+  #    RABBITMQ_DEFAULT_USER: user       # Default username
+  #    RABBITMQ_DEFAULT_PASS: password   # Default password
+  ##  volumes:
+   #   - rabbitmq_data:/var/lib/rabbitmq  # Persistent data storage
+    # # - ./rabbitMQ/enabled_plugins:/etc/rabbitmq/enabled_plugins
+     # - ./rabbitMQ/rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
+      #- ./rabbitMQ:/etc/rabbitmq/conf.d
+      #- ./rabbitMQ/definitions.json:/etc/rabbitmq/definitions.json
+      #- ./rabbitMQ/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+
+  artifactory:
+    image: registry
+    ports:
+      - 5000:5000
+    restart: always
+    networks:
+      - shared_network
+
+  jenkins-agent:
+    image: jenkins/ssh-agent:latest
+    container_name: jenkins-agent
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSxHwMn22DTI1x56iLwErph6EgNAfhOYKUbAswrlVvE09YpVoxB3Gpuj7WRTHIH6Hz3c8OfbO8hiI0CmyUQVQl5ew8nx3MPPHzbEWN+PiFtVbCXCGTOHcvrQIJbZxTrP9lJbIJvUjruGifTqps4SgjvYudYcb8EdsVHp4REikCZZUPeQcZLO2dItf2ajdP7kRkVUYVSbscRs4ponjMi9q9N5sLr05L1qptR/c+7RJUP9+MpaefQZ84tmPJx4PzJV5+dWRW2OM/0NXo7TP59+813WPd0UnwC8OdpiC5hGoXzw8zVP6Su/jGXxOYumZyxhpQyKo1kL2gbj9DBgM/u4qpvhjvWMpiFJ4uLdUgvVWgjgQBXhSo2w0tWkHHYRBe17yNYwrJkVsMGkowke7GH1RMxHh7UWy3WKR5i+/WCAny/n+FgELkQrySbXBLG7eUTplZb2JYAIV1l1HZ6t/BHLJOlWUva22qsQd/jkA0SjFTZRsmpxEgpWtRNsMVeDlI1/E= test@test2
+    restart: always
+    volumes:
+      - /usr/bin/docker:/usr/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - shared_network
+
+  web:
+    image: nginx:latest
+    ports:
+      - 8090:9000
+    volumes:
+      - ./my_conf:/etc/nginx/conf.d
+    depends_on:
+      - jenkins
+    restart: always
+    networks:
+      - shared_network
+
+  consul:
+    image: hashicorp/consul:latest
+    ports:
+      - "8500:8500"     # Web UI
+      - "8600:8600/udp" # DNS
+      - "8300:8300"     # Server RPC
+      - "8301:8301"     # Serf LAN
+      - "8301:8301/udp"
+      - "8302:8302"     # Serf WAN (optional if clustering)
+      - "8302:8302/udp"
+    command: "agent -server -bootstrap -ui -client=0.0.0.0 -node=consul-server -datacenter=dc1 -bind=0.0.0.0 -data-dir=/consul/data"
+    volumes:
+      - consul_data:/consul/data
+    depends_on:
+      - jenkins
+    restart: always
+    networks:
+      - shared_network
+    
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_API_ADDR: "http://localhost:8200"
+      VAULT_ADDRESS: "http://localhost:8200"
+    volumes:
+      - /home/shaked/vault/logs:/vault/logs/:rw
+      - /home/shaked/vault/data:/vault/data/:rw
+      - /home/shaked/vault/config:/vault/config/:rw
+      - /home/shaked/vault/file:/vault/file/:rw
+    cap_add:
+      - IPC_LOCK
+    command: "server -dev"
+    entrypoint: vault server -config /vault/config/config.hcl
+
+    depends_on:
+      - jenkins
+    restart: always
+    networks:
+      - shared_network
+
+  aws_cli:
+     image: amazon/aws-cli:latest
+     container_name: awscli
+     environment:
+      - AWS_DEFAULT_REGION=il-central-1
+     volumes:
+      - ~/aws:/root/.aws:ro            # AWS credentials
+      - ~/aws:/root/.ssh:ro
+      - ~/aws/route53:/aws/route53.json:ro 
+     entrypoint: /bin/sh 
+     stdin_open: true
+     tty: true
+
+     depends_on:
+      - jenkins
+     restart: always
+     networks:
+      - shared_network
+    
+
+
+volumes:
+  jenkins_home:
+  rabbitmq_data:
+  consul_data:
+networks:
+  shared_network:
+    name: shared_network
