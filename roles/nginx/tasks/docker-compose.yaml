@@ -50,17 +50,7 @@ services:
     networks:
       - shared_network
 
-  jenkins-agent:
-    image: jenkins/ssh-agent:latest
-    container_name: jenkins-agent
-    environment:
-      - JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSxHwMn22DTI1x56iLwErph6EgNAfhOYKUbAswrlVvE09YpVoxB3Gpuj7WRTHIH6Hz3c8OfbO8hiI0CmyUQVQl5ew8nx3MPPHzbEWN+PiFtVbCXCGTOHcvrQIJbZxTrP9lJbIJvUjruGifTqps4SgjvYudYcb8EdsVHp4REikCZZUPeQcZLO2dItf2ajdP7kRkVUYVSbscRs4ponjMi9q9N5sLr05L1qptR/c+7RJUP9+MpaefQZ84tmPJx4PzJV5+dWRW2OM/0NXo7TP59+813WPd0UnwC8OdpiC5hGoXzw8zVP6Su/jGXxOYumZyxhpQyKo1kL2gbj9DBgM/u4qpvhjvWMpiFJ4uLdUgvVWgjgQBXhSo2w0tWkHHYRBe17yNYwrJkVsMGkowke7GH1RMxHh7UWy3WKR5i+/WCAny/n+FgELkQrySbXBLG7eUTplZb2JYAIV1l1HZ6t/BHLJOlWUva22qsQd/jkA0SjFTZRsmpxEgpWtRNsMVeDlI1/E= test@test2
-    restart: always
-    volumes:
-      - /usr/bin/docker:/usr/bin/docker
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - shared_network
+
 
   web:
     image: nginx:latest
